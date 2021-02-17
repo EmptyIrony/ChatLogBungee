@@ -1,0 +1,4 @@
+name: ChatLogBungee
+version: ${project.version}
+main: me.cunzai.chatlog.ChatLogBungee
+
