@@ -6,11 +6,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.imaginarycode.minecraft.redisbungee.RedisBungee;
 import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.ReplaceOptions;
 import lombok.Getter;
 import lombok.ToString;
 import me.cunzai.chatlog.ChatLogBungee;
 import me.cunzai.chatlog.data.sub.ChatData;
+import me.cunzai.chatlog.queue.MongoQueue;
 import org.bson.Document;
 import redis.clients.jedis.Jedis;
 
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 @ToString
 public class PlayerData {
     private final static JsonParser parser = new JsonParser();
-    private final static Map<UUID, PlayerData> dataUuidMap = new HashMap<>();
+    private final static Map<UUID, String> dataUuidMap = new HashMap<>();
     private final static Map<String, PlayerData> dataNameMap = new HashMap<>();
     private final List<ChatData> chats;
     private UUID uuid;
@@ -43,58 +43,20 @@ public class PlayerData {
         this.chats = new ArrayList<>();
     }
 
-
-    public void handleJoin(){
-        System.out.println("login: " + this.uuid.toString());
-        System.out.println("login: " + this.name);
-        dataUuidMap.put(this.uuid,this);
-        dataNameMap.put(this.name.toLowerCase(),this);
-
-        try(Jedis jedis = ChatLogBungee.getInstance().getJedisHelper().getPool().getResource()){
-            jedis.hset("uuid-to-name",this.uuid.toString(),this.name);
-            jedis.hset("chatLogData",name.toLowerCase(),this.dataToString());
-        }catch (Exception e){
-            e.printStackTrace();
-        }
+    public static PlayerData getPlayerDataFromCache(UUID uuid) {
+        return dataNameMap.get(dataUuidMap.get(uuid));
     }
 
-    public void updateRedisCache(){
-        try(Jedis jedis = ChatLogBungee.getInstance().getJedisHelper().getPool().getResource()){
-            jedis.hset("chatLogData",name.toLowerCase(),this.dataToString());
-        }catch (Exception e){
+    public void updateRedisCache() {
+        try (Jedis jedis = ChatLogBungee.getInstance().getJedisHelper().getPool().getResource()) {
+            jedis.hset("chatLogData", name.toLowerCase(), this.dataToString());
+        } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public void handleQuit(){
-        dataUuidMap.remove(this.uuid);
-        dataNameMap.remove(this.name.toLowerCase());
-
-        try(Jedis jedis = ChatLogBungee.getInstance().getJedisHelper().getPool().getResource()){
-            jedis.hdel("uuid-to-name",this.uuid.toString());
-            jedis.hdel("chatLogData",name.toLowerCase());
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-
-        List<ChatData> shouldRemove = this.chats.stream()
-                .filter(chatData -> System.currentTimeMillis() - chatData.getTimestamp() >= 30 * 24 * 60 * 60 * 1000L)
-                .collect(Collectors.toList());
-
-        this.chats.removeAll(shouldRemove);
-
-        ChatLogBungee.getInstance()
-                .getMongoDB()
-                .getDocuments()
-                .replaceOne(Filters.eq("uuid",this.uuid.toString()),dataToDocument(),new ReplaceOptions().upsert(true));
-    }
-
-    public static PlayerData getPlayerDataFromCache(UUID uuid){
-        return dataUuidMap.get(uuid);
     }
 
     public static PlayerData getDataByUuid(UUID uuid) {
-        PlayerData playerData = dataUuidMap.get(uuid);
+        PlayerData playerData = getPlayerDataFromCache(uuid);
         if (playerData != null) {
             return playerData;
         }
@@ -109,21 +71,52 @@ public class PlayerData {
         return playerData;
     }
 
+    public void handleJoin() {
+        dataUuidMap.put(this.uuid, this.name.toLowerCase());
+        dataNameMap.put(this.name.toLowerCase(), this);
+
+        try (Jedis jedis = ChatLogBungee.getInstance().getJedisHelper().getPool().getResource()) {
+            jedis.hset("uuid-to-name", this.uuid.toString(), this.name);
+            jedis.hset("chatLogData", name.toLowerCase(), this.dataToString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void handleQuit() {
+        dataUuidMap.remove(this.uuid);
+        dataNameMap.remove(this.name.toLowerCase());
+
+        try(Jedis jedis = ChatLogBungee.getInstance().getJedisHelper().getPool().getResource()){
+            jedis.hdel("uuid-to-name",this.uuid.toString());
+            jedis.hdel("chatLogData",name.toLowerCase());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        List<ChatData> shouldRemove = this.chats.stream()
+                .filter(chatData -> System.currentTimeMillis() - chatData.getTimestamp() >= 30 * 24 * 60 * 60 * 1000L)
+                .collect(Collectors.toList());
+
+        this.chats.removeAll(shouldRemove);
+
+        MongoQueue.getQueue()
+                .getSaveQueue()
+                .add(this);
+    }
+
     public static PlayerData getDataByName(String name) {
         PlayerData playerData = dataNameMap.get(name.toLowerCase());
         if (playerData != null) {
-            System.out.println("从缓存中拿数据成功");
             return playerData;
         }
 
         playerData = getDataByNameFromRedis(name.toLowerCase());
         if (playerData != null) {
-            System.out.println("从Redis中拿数据成功");
             return playerData;
         }
 
         playerData = getDataByNameFromMongo(name.toLowerCase());
-        System.out.println("从Mongo中拿数据成功");
 
         return playerData;
     }

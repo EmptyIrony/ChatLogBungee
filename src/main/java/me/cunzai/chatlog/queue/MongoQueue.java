@@ -15,20 +15,32 @@ import java.util.Queue;
  * @Date: 2021/2/10 10:28
  */
 
-public class MongoQueue implements Runnable{
+public class MongoQueue implements Runnable {
+    @Getter
+    private static MongoQueue queue;
+
     @Getter
     private final Queue<PlayerData> saveQueue = new LinkedList<>();
 
+    public MongoQueue() {
+        queue = this;
+    }
 
     @Override
     public void run() {
-        PlayerData data = saveQueue.poll();
-        if (data != null){
-            Document document = data.dataToDocument();
-            ChatLogBungee.getInstance()
-                    .getMongoDB()
-                    .getDocuments()
-                    .replaceOne(Filters.eq("uuid",data.getUuid().toString()),document,new ReplaceOptions().upsert(true));
+
+        //save 20 nums pre 100 milliseconds
+        for (int i = 0; i < 20; i++) {
+            PlayerData data = saveQueue.poll();
+            if (data != null) {
+                Document document = data.dataToDocument();
+                ChatLogBungee.getInstance()
+                        .getMongoDB()
+                        .getDocuments()
+                        .replaceOne(Filters.eq("name", data.getName().toLowerCase()), document, new ReplaceOptions().upsert(true));
+            } else {
+                return;
+            }
         }
     }
 }

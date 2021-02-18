@@ -15,8 +15,9 @@ public class ChatData {
     private long timestamp;
     private String message;
     private ChatType chatType;
+    private String currentServer;
 
-    public static enum ChatType{
+    public enum ChatType {
         CHAT,
         SHOUT,
         PRIVATE,

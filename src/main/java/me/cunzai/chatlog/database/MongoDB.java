@@ -25,11 +25,15 @@ public class MongoDB {
     private final MongoCollection<Document> documents;
 
     public MongoDB() {
-        this.client = new MongoClient(address,port);
+        this.client = new MongoClient(address, port);
         this.database = this.client.getDatabase("chat");
         this.documents = this.database.getCollection("data");
-        if (this.documents.listIndexes().first() == null){
-            this.documents.createIndex(Filters.eq("uuid",1),new IndexOptions().background(true).unique(true));
+        int i = 0;
+        for (Document ignored : this.documents.listIndexes()) {
+            i++;
+        }
+        if (i == 1) {
+            this.documents.createIndex(Filters.eq("name", 1), new IndexOptions().background(true).unique(true));
         }
     }
 }

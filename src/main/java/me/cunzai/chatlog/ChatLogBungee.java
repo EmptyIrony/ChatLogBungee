@@ -51,8 +51,8 @@ public final class ChatLogBungee extends Plugin {
         log.info("ok");
 
         log.info("starting queue thread");
-        new ScheduledThreadPoolExecutor(1).scheduleWithFixedDelay(new MongoQueue(),100,100, TimeUnit.MILLISECONDS);
-        new ScheduledThreadPoolExecutor(1).scheduleWithFixedDelay(new RedisQueue(),1,1, TimeUnit.SECONDS);
+        new ScheduledThreadPoolExecutor(1).scheduleWithFixedDelay(new MongoQueue(), 100, 100, TimeUnit.MILLISECONDS);
+        new ScheduledThreadPoolExecutor(1).scheduleWithFixedDelay(new RedisQueue(), 100, 100, TimeUnit.MILLISECONDS);
 
 
     }

@@ -2,11 +2,9 @@ package me.cunzai.chatlog.command;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.imaginarycode.minecraft.redisbungee.RedisBungee;
 import lombok.SneakyThrows;
 import me.cunzai.chatlog.data.PlayerData;
 import me.cunzai.chatlog.data.sub.ChatData;
-import me.cunzai.chatlog.util.chat.CC;
 import me.cunzai.chatlog.util.time.Duration;
 import me.cunzai.chatlog.util.time.TimeUtil;
 import net.md_5.bungee.api.ChatColor;
@@ -22,15 +20,12 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
-import sun.misc.IOUtils;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.stream.Collectors;
 
 /**
  * @Author: EmptyIrony
@@ -91,7 +86,24 @@ public class ChatLogCommand extends Command {
             dataList.stream()
                     .filter(chatData -> chatData.getChatType() == type)
                     .filter(chatData -> now - chatData.getTimestamp() <= duration.getValue())
-                    .forEach(entry -> messages.append("[").append(this.format.format(entry.getTimestamp())).append("] ").append(entry.getMessage()).append("\n"));
+                    .forEach(entry -> {
+                        if (entry.getCurrentServer() != null) {
+                            messages.append("[")
+                                    .append(this.format.format(entry.getTimestamp()))
+                                    .append("] (")
+                                    .append(entry.getCurrentServer())
+                                    .append(") ")
+                                    .append(entry.getMessage())
+                                    .append("\n");
+                        } else {
+                            messages
+                                    .append("[")
+                                    .append(this.format.format(entry.getTimestamp()))
+                                    .append("] ")
+                                    .append(entry.getMessage())
+                                    .append("\n");
+                        }
+                    });
 
             CloseableHttpClient client = HttpClientBuilder.create().build();
 
