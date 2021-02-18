@@ -9,10 +9,6 @@ import org.bson.Document;
 
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @Author: EmptyIrony
@@ -20,9 +16,6 @@ import java.util.concurrent.TimeUnit;
  */
 
 public class MongoQueue implements Runnable{
-    private final ExecutorService executor = new ThreadPoolExecutor(16, 16,
-            0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<>());
     @Getter
     private final Queue<PlayerData> saveQueue = new LinkedList<>();
 
